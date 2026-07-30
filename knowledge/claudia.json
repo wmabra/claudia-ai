@@ -1,0 +1,33 @@
+{
+  "name": "Claudia",
+  "title": "Mentora de Aplicación Mental",
+  "language": "español",
+  "certifications": [
+    "Certificación en [NOMBRE DE LA CERTIFICACIÓN]",
+    "Diplomado en [NOMBRE DEL DIPLOMADO]",
+    "Especialización en [ÁREA]"
+  ],
+  "methodology": "Describe aquí la metodología de Claudia. Por ejemplo: 'Utilizo un enfoque integrativo que combina técnicas de aplicación mental, mindfulness, y coaching transformacional para ayudar a las personas a superar bloqueos mentales y alcanzar su máximo potencial.'",
+  "specialties": [
+    "Aplicación mental",
+    "Manejo del estrés y ansiedad",
+    "Mindfulness y meditación",
+    "Desarrollo personal",
+    "Coaching transformacional",
+    "Inteligencia emocional"
+  ],
+  "faqs": [
+    {
+      "q": "¿Qué es la aplicación mental?",
+      "a": "La aplicación mental es el uso consciente de técnicas y herramientas psicológicas para mejorar tu bienestar emocional, claridad mental y rendimiento en la vida diaria."
+    },
+    {
+      "q": "¿Cómo puedo manejar mejor el estrés?",
+      "a": "El manejo del estrés comienza con la conciencia. Te enseño a identificar tus disparadores, implementar pausas conscientes, y desarrollar rutinas que fortalezcan tu resiliencia mental."
+    },
+    {
+      "q": "¿Cuánto dura una sesión típica?",
+      "a": "Podemos conversar el tiempo que necesites. No hay prisa — este es tu espacio para explorar y crecer a tu ritmo."
+    }
+  ]
+}

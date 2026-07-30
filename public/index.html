@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Claudia — Mentora de Aplicación Mental</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(
+          ellipse at center,
+          #0a0a1a 0%,
+          #000010 100%
+        );
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      /* ── Orb ── */
+      .orb-container {
+        position: relative;
+        width: 280px;
+        height: 280px;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+      }
+      .orb-container:active {
+        transform: scale(0.95);
+      }
+      .orb-container.listening {
+        transform: scale(1.05);
+      }
+      .orb-container.thinking {
+        animation: orbPulse 1.2s ease-in-out infinite;
+      }
+
+      @keyframes orbPulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.06);
+        }
+      }
+
+      .orb-outer {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: conic-gradient(
+          from 0deg,
+          #6c5ce7,
+          #a855f7,
+          #6366f1,
+          #8b5cf6,
+          #a78bfa,
+          #7c3aed,
+          #6c5ce7
+        );
+        animation: spin 8s linear infinite;
+        filter: blur(0px);
+        opacity: 0.9;
+        box-shadow:
+          0 0 60px rgba(124, 58, 237, 0.4),
+          0 0 120px rgba(99, 102, 241, 0.2),
+          inset 0 0 60px rgba(0, 0, 0, 0.3);
+        transition: all 0.6s ease;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* State variations */
+      .listening .orb-outer {
+        animation-duration: 3s;
+        box-shadow:
+          0 0 80px rgba(59, 130, 246, 0.6),
+          0 0 160px rgba(59, 130, 246, 0.3),
+          inset 0 0 60px rgba(0, 0, 0, 0.3);
+      }
+      .thinking .orb-outer {
+        animation-duration: 1.5s;
+        box-shadow:
+          0 0 100px rgba(168, 85, 247, 0.7),
+          0 0 200px rgba(139, 92, 246, 0.4),
+          inset 0 0 60px rgba(0, 0, 0, 0.3);
+      }
+      .speaking .orb-outer {
+        animation-duration: 2s;
+        animation-direction: alternate;
+        box-shadow:
+          0 0 80px rgba(34, 197, 94, 0.5),
+          0 0 160px rgba(34, 197, 94, 0.25),
+          inset 0 0 60px rgba(0, 0, 0, 0.3);
+      }
+
+      .orb-inner {
+        position: absolute;
+        inset: 12px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle at 40% 35%,
+          rgba(255, 255, 255, 0.15) 0%,
+          rgba(0, 0, 0, 0.6) 100%
+        );
+        z-index: 1;
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
+      }
+
+      .orb-text {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 18px;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        text-align: center;
+        pointer-events: none;
+        transition: opacity 0.3s;
+      }
+
+      .orb-mic {
+        position: absolute;
+        bottom: -4px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 3;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+      }
+      .orb-mic svg {
+        width: 20px;
+        height: 20px;
+        opacity: 0.7;
+      }
+      .listening .orb-mic {
+        background: rgba(59, 130, 246, 0.3);
+        border-color: rgba(59, 130, 246, 0.5);
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+      }
+
+      /* ── Conversation panel ── */
+      .conv-panel {
+        position: fixed;
+        bottom: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(90vw, 500px);
+        max-height: 200px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        opacity: 0;
+        transition: opacity 0.4s;
+        pointer-events: none;
+        scroll-behavior: smooth;
+      }
+      .conv-panel.visible {
+        opacity: 1;
+      }
+
+      .conv-msg {
+        padding: 12px 16px;
+        border-radius: 16px;
+        font-size: 15px;
+        line-height: 1.5;
+        max-width: 85%;
+        animation: msgIn 0.35s ease-out;
+      }
+      @keyframes msgIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .conv-msg.user {
+        align-self: flex-end;
+        background: rgba(99, 102, 241, 0.2);
+        color: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+      }
+      .conv-msg.assistant {
+        align-self: flex-start;
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      /* ── Status bar ── */
+      .status-bar {
+        position: fixed;
+        top: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 13px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: all 0.4s;
+      }
+      .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transition: background 0.4s;
+      }
+      .status-dot.active {
+        background: #3b82f6;
+      }
+      .status-dot.thinking {
+        background: #a855f7;
+        animation: dotPulse 0.8s ease-in-out infinite;
+      }
+      .status-dot.speaking {
+        background: #22c55e;
+      }
+      @keyframes dotPulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+
+      /* ── Error toast ── */
+      .error-toast {
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 10px 20px;
+        border-radius: 12px;
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      .error-toast.visible {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Status bar -->
+    <div class="status-bar" id="statusBar">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusLabel">Presiona el orbe para hablar</span>
+    </div>
+
+    <!-- Error toast -->
+    <div class="error-toast" id="errorToast"></div>
+
+    <!-- Conversation -->
+    <div class="conv-panel" id="convPanel"></div>
+
+    <!-- Orb -->
+    <div class="orb-container" id="orb">
+      <div class="orb-outer"></div>
+      <div class="orb-inner"></div>
+      <div class="orb-text" id="orbText">Claudia</div>
+      <div class="orb-mic">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="white"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          <line x1="12" y1="19" x2="12" y2="23" />
+          <line x1="8" y1="23" x2="16" y2="23" />
+        </svg>
+      </div>
+    </div>
+
+    <script>
+      // ── State ──
+      const STATE = {
+        IDLE: "idle",
+        LISTENING: "listening",
+        THINKING: "thinking",
+        SPEAKING: "speaking",
+      };
+      let currentState = STATE.IDLE;
+      let mediaRecorder = null;
+      let audioChunks = [];
+      let ws = null;
+      let reconnectTimer = null;
+
+      // ── DOM elements ──
+      const orb = document.getElementById("orb");
+      const orbText = document.getElementById("orbText");
+      const statusBar = document.getElementById("statusBar");
+      const statusDot = document.getElementById("statusDot");
+      const statusLabel = document.getElementById("statusLabel");
+      const convPanel = document.getElementById("convPanel");
+      const errorToast = document.getElementById("errorToast");
+
+      // ── WebSocket ──
+      function connect() {
+        const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${location.host}`;
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log("Connected");
+          if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+          }
+          setStatus("Presiona el orbe para hablar", "idle");
+        };
+
+        ws.onmessage = (event) => {
+          let msg;
+          try {
+            msg = JSON.parse(event.data);
+          } catch {
+            return;
+          }
+
+          switch (msg.type) {
+            case "status":
+              setState(msg.state);
+              if (msg.text) setStatus(msg.text, msg.state);
+              break;
+
+            case "text":
+              addMessage(msg.role, msg.content);
+              break;
+
+            case "audio":
+              playAudio(msg.data, msg.mime);
+              break;
+
+            case "error":
+              showError(msg.message);
+              setState(STATE.IDLE);
+              break;
+
+            case "pong":
+              break;
+          }
+        };
+
+        ws.onclose = () => {
+          console.log("Disconnected, reconnecting in 3s...");
+          setStatus("Reconectando...", "idle");
+          reconnectTimer = setTimeout(connect, 3000);
+        };
+
+        ws.onerror = () => {
+          ws.close();
+        };
+      }
+
+      // ── State management ──
+      function setState(state) {
+        currentState = state;
+        orb.className = "orb-container";
+        statusDot.className = "status-dot";
+
+        if (state === STATE.LISTENING) {
+          orb.classList.add("listening");
+          statusDot.classList.add("active");
+          orbText.textContent = "🎤";
+        } else if (state === STATE.THINKING) {
+          orb.classList.add("thinking");
+          statusDot.classList.add("thinking");
+          orbText.textContent = "⋯";
+        } else if (state === STATE.SPEAKING) {
+          orb.classList.add("speaking");
+          statusDot.classList.add("speaking");
+          orbText.textContent = "🔊";
+        } else {
+          orbText.textContent = "Claudia";
+        }
+      }
+
+      function setStatus(text, state) {
+        statusLabel.textContent = text;
+      }
+
+      // ── Messages ──
+      function addMessage(role, content) {
+        const div = document.createElement("div");
+        div.className = `conv-msg ${role}`;
+        div.textContent = content;
+        convPanel.appendChild(div);
+        convPanel.classList.add("visible");
+        convPanel.scrollTop = convPanel.scrollHeight;
+
+        // Auto-hide after 8 seconds
+        clearTimeout(convPanel._hideTimer);
+        convPanel._hideTimer = setTimeout(() => {
+          convPanel.classList.remove("visible");
+        }, 8000);
+      }
+
+      // ── Audio playback ──
+      function playAudio(base64Data, mime) {
+        const audio = new Audio(`data:${mime};base64,${base64Data}`);
+        audio.onended = () => {
+          setState(STATE.IDLE);
+          setStatus("Presiona el orbe para hablar", "idle");
+        };
+        audio.onerror = () => {
+          setState(STATE.IDLE);
+          setStatus("Presiona el orbe para hablar", "idle");
+        };
+        audio.play().catch(console.error);
+      }
+
+      // ── Error ──
+      function showError(message) {
+        errorToast.textContent = message;
+        errorToast.classList.add("visible");
+        setTimeout(() => errorToast.classList.remove("visible"), 4000);
+      }
+
+      // ── Audio recording ──
+      async function startRecording() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          // Prefer opus/webm for best quality/size ratio
+          const mimeType = MediaRecorder.isTypeSupported(
+            "audio/webm;codecs=opus",
+          )
+            ? "audio/webm;codecs=opus"
+            : "audio/webm";
+
+          mediaRecorder = new MediaRecorder(stream, { mimeType });
+          audioChunks = [];
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = async () => {
+            stream.getTracks().forEach((t) => t.stop());
+            if (audioChunks.length === 0) return;
+
+            const blob = new Blob(audioChunks, { type: mimeType });
+            const reader = new FileReader();
+            reader.onload = () => {
+              const base64 = reader.result.split(",")[1];
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "audio", data: base64 }));
+              }
+            };
+            reader.readAsDataURL(blob);
+          };
+
+          mediaRecorder.start();
+          setState(STATE.LISTENING);
+          setStatus("Escuchando...", "listening");
+        } catch (err) {
+          showError("No se pudo acceder al micrófono: " + err.message);
+        }
+      }
+
+      function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+          mediaRecorder.stop();
+          setState(STATE.THINKING);
+          setStatus("Procesando...", "thinking");
+        }
+      }
+
+      // ── Orb interaction ──
+      let isPressed = false;
+
+      orb.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        if (currentState === STATE.THINKING || currentState === STATE.SPEAKING)
+          return;
+        isPressed = true;
+        startRecording();
+      });
+
+      orb.addEventListener("pointerup", (e) => {
+        e.preventDefault();
+        if (!isPressed) return;
+        isPressed = false;
+        stopRecording();
+      });
+
+      orb.addEventListener("pointerleave", () => {
+        if (isPressed) {
+          isPressed = false;
+          stopRecording();
+        }
+      });
+
+      // ── Keyboard shortcut: Space to talk ──
+      document.addEventListener("keydown", (e) => {
+        if (e.code === "Space" && !isPressed && currentState === STATE.IDLE) {
+          e.preventDefault();
+          isPressed = true;
+          startRecording();
+        }
+      });
+
+      document.addEventListener("keyup", (e) => {
+        if (e.code === "Space" && isPressed) {
+          e.preventDefault();
+          isPressed = false;
+          stopRecording();
+        }
+      });
+
+      // ── Init ──
+      connect();
+    </script>
+  </body>
+</html>

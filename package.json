@@ -1,0 +1,14 @@
+{
+  "name": "claudia-ai",
+  "version": "1.0.0",
+  "description": "Claudia AI — voice agent for aplicación mental mentoring in Spanish",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "ws": "^8.18.0"
+  }
+}

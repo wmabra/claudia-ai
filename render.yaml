@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: claudia
+    runtime: node
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
+        sync: false
