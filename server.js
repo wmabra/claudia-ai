@@ -50,14 +50,21 @@ function loadKnowledge() {
 
 function searchKnowledge(query) {
 	if (!knowledgeSections.length) return "";
-	const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+	const terms = query
+		.toLowerCase()
+		.split(/\s+/)
+		.filter((t) => t.length > 2);
 	if (!terms.length) return "";
 
 	const scored = knowledgeSections.map((s, i) => {
 		const text = (s.title + " " + s.content).toLowerCase();
 		let score = 0;
 		for (const term of terms) {
-			const count = (text.match(new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+			const count = (
+				text.match(
+					new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+				) || []
+			).length;
 			score += count;
 			if (s.title.toLowerCase().includes(term)) score += 5; // title match bonus
 		}
@@ -65,13 +72,15 @@ function searchKnowledge(query) {
 	});
 
 	scored.sort((a, b) => b.score - a.score);
-	const top = scored.slice(0, 3).filter(s => s.score > 0);
+	const top = scored.slice(0, 3).filter((s) => s.score > 0);
 	if (!top.length) return "";
 
-	return top.map(s => {
-		const sec = knowledgeSections[s.i];
-		return `[${sec.title}]\n${sec.content}`;
-	}).join("\n\n---\n\n");
+	return top
+		.map((s) => {
+			const sec = knowledgeSections[s.i];
+			return `[${sec.title}]\n${sec.content}`;
+		})
+		.join("\n\n---\n\n");
 }
 loadKnowledge();
 
@@ -143,7 +152,9 @@ async function getLLMResponse(conversationHistory, userMessage) {
 	// Search knowledge base for relevant context
 	const relevantKnowledge = searchKnowledge(userMessage);
 	const systemWithContext = relevantKnowledge
-		? SYSTEM_PROMPT + "\n\n## Información Relevante de tu Conocimiento\n" + relevantKnowledge
+		? SYSTEM_PROMPT +
+			"\n\n## Información Relevante de tu Conocimiento\n" +
+			relevantKnowledge
 		: SYSTEM_PROMPT;
 
 	const messages = [
