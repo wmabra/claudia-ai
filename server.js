@@ -11,39 +11,67 @@ const PORT = process.env.PORT || 8787;
 // ──────────────────────────────────────────────
 // Knowledge base
 // ──────────────────────────────────────────────
-let knowledgeText = "";
-const knowledgePath = resolve(__dirname, "knowledge", "claudia.txt");
-const knowledgeJsonPath = resolve(__dirname, "knowledge", "claudia.json");
+// ── Knowledge base with retrieval ──
+let knowledgeSections = [];
+const rawPath = resolve(__dirname, "knowledge", "claudia_raw.txt");
 
 function loadKnowledge() {
-	if (existsSync(knowledgePath)) {
-		knowledgeText = readFileSync(knowledgePath, "utf8");
-		console.log(`Knowledge loaded: ${knowledgeText.length} chars`);
-	} else if (existsSync(knowledgeJsonPath)) {
-		let kb;
-		try {
-			kb = JSON.parse(readFileSync(knowledgeJsonPath, "utf8"));
-		} catch (e) {
-			console.error("Failed to parse knowledge JSON:", e.message);
-			return;
+	knowledgeSections = [];
+	if (existsSync(rawPath)) {
+		const raw = readFileSync(rawPath, "utf8");
+		// Split by document markers
+		const docs = raw.split(/\n--- /).filter(Boolean);
+		for (const doc of docs) {
+			const newline = doc.indexOf("\n");
+			const title = doc.slice(0, newline).trim().replace(/^--- /, "");
+			const content = doc.slice(newline + 1).trim();
+			if (content.length > 50) {
+				// Further split large docs into chunks
+				if (content.length > 4000) {
+					const paragraphs = content.split(/\n\n+/);
+					let chunk = "";
+					for (const p of paragraphs) {
+						if ((chunk + p).length > 4000 && chunk) {
+							knowledgeSections.push({ title, content: chunk.trim() });
+							chunk = p;
+						} else {
+							chunk += (chunk ? "\n\n" : "") + p;
+						}
+					}
+					if (chunk) knowledgeSections.push({ title, content: chunk.trim() });
+				} else {
+					knowledgeSections.push({ title, content });
+				}
+			}
 		}
-		knowledgeText = [
-			`## Certificaciones y Formación`,
-			...(kb.certifications || []).map((c) => `- ${c}`),
-			``,
-			`## Metodología`,
-			kb.methodology || "",
-			``,
-			`## Áreas de Especialidad`,
-			...(kb.specialties || []).map((s) => `- ${s}`),
-			``,
-			`## Preguntas Frecuentes`,
-			...(kb.faqs || []).map((f) => `Q: ${f.q}\nA: ${f.a}`),
-		].join("\n");
-		console.log(`Knowledge loaded from JSON: ${knowledgeText.length} chars`);
-	} else {
-		console.log("No knowledge base found — running without custom knowledge");
+		console.log(`Knowledge loaded: ${knowledgeSections.length} sections`);
 	}
+}
+
+function searchKnowledge(query) {
+	if (!knowledgeSections.length) return "";
+	const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+	if (!terms.length) return "";
+
+	const scored = knowledgeSections.map((s, i) => {
+		const text = (s.title + " " + s.content).toLowerCase();
+		let score = 0;
+		for (const term of terms) {
+			const count = (text.match(new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+			score += count;
+			if (s.title.toLowerCase().includes(term)) score += 5; // title match bonus
+		}
+		return { i, score };
+	});
+
+	scored.sort((a, b) => b.score - a.score);
+	const top = scored.slice(0, 3).filter(s => s.score > 0);
+	if (!top.length) return "";
+
+	return top.map(s => {
+		const sec = knowledgeSections[s.i];
+		return `[${sec.title}]\n${sec.content}`;
+	}).join("\n\n---\n\n");
 }
 loadKnowledge();
 
@@ -61,7 +89,11 @@ const SYSTEM_PROMPT = `Eres Claudia, una mentora profesional de aplicación ment
 - Tus respuestas son concisas y prácticas — la gente está hablando contigo, no leyendo un libro
 
 ## Tu Conocimiento
-${knowledgeText || "Eres experta en aplicación mental, desarrollo personal, coaching y mentoría."}
+Eres Claudia Mabra, Maestra Certificada en el Método Aplicación Mental, Conferencista Internacional, con especialidades en Diagnóstico Mental de la Salud, Definición de carácter en base a la fisionomía, y Salud Mental para Atletas de alto rendimiento. Tienes un Diplomado en Educación Financiera, Certificación en Diseño de Cursos, formación en Mindfulness, y completaste el Intensive & Progressive Course de Joe Dispenza.
+
+Tu metodología principal es el Método de Aplicación Mental, que enseña que los pensamientos crean realidad y que los bloqueos mentales son patrones de pensamiento inconscientes que limitan el potencial. Trabajas con técnicas de reprogramación mental, diagnóstico mental cuerpo-mente, y desarrollo de la consciencia.
+
+Cuando alguien te pregunta algo específico sobre tu metodología, recibirás información relevante de tu conocimiento para responder con precisión.
 
 ## Reglas Importantes
 - SIEMPRE responde en español
@@ -108,8 +140,14 @@ async function getLLMResponse(conversationHistory, userMessage) {
 	const apiKey = process.env.DEEPSEEK_API_KEY;
 	if (!apiKey) throw new Error("DEEPSEEK_API_KEY not set");
 
+	// Search knowledge base for relevant context
+	const relevantKnowledge = searchKnowledge(userMessage);
+	const systemWithContext = relevantKnowledge
+		? SYSTEM_PROMPT + "\n\n## Información Relevante de tu Conocimiento\n" + relevantKnowledge
+		: SYSTEM_PROMPT;
+
 	const messages = [
-		{ role: "system", content: SYSTEM_PROMPT },
+		{ role: "system", content: systemWithContext },
 		...conversationHistory.slice(-10), // keep last 10 exchanges
 		{ role: "user", content: userMessage },
 	];
