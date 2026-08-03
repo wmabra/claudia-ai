@@ -116,17 +116,17 @@ Cuando alguien te pregunta algo específico sobre tu metodología, recibirás in
 // ──────────────────────────────────────────────
 // Deepgram STT
 // ──────────────────────────────────────────────
-async function transcribeAudio(audioBuffer) {
+async function transcribeAudio(audioBuffer, mimeType = "audio/webm;codecs=opus") {
 	const apiKey = process.env.DEEPGRAM_API_KEY;
 	if (!apiKey) throw new Error("DEEPGRAM_API_KEY not set");
 
 	const resp = await fetch(
-		"https://api.deepgram.com/v1/listen?model=nova-2&language=es&smart_format=true&punctuate=true",
+		"https://api.deepgram.com/v1/listen?model=nova-2&language=es&smart_format=true&punctuate=true&encoding=opus",
 		{
 			method: "POST",
 			headers: {
 				Authorization: `Token ${apiKey}`,
-				"Content-Type": "audio/webm",
+				"Content-Type": mimeType,
 			},
 			body: audioBuffer,
 		},
@@ -311,9 +311,10 @@ wss.on("connection", (ws) => {
 
 				// Decode base64 audio
 				const audioBuffer = Buffer.from(msg.data, "base64");
+				const audioMime = msg.mimeType || "audio/webm;codecs=opus";
 
 				// 2) Transcribe
-				const transcript = await transcribeAudio(audioBuffer);
+				const transcript = await transcribeAudio(audioBuffer, audioMime);
 				console.log("Transcript:", transcript);
 
 				if (!transcript) {
