@@ -116,12 +116,12 @@ Cuando alguien te pregunta algo específico sobre tu metodología, recibirás in
 // ──────────────────────────────────────────────
 // Deepgram STT
 // ──────────────────────────────────────────────
-async function transcribeAudio(audioBuffer, mimeType = "audio/webm;codecs=opus") {
+async function transcribeAudio(audioBuffer, mimeType = "audio/wav") {
 	const apiKey = process.env.DEEPGRAM_API_KEY;
 	if (!apiKey) throw new Error("DEEPGRAM_API_KEY not set");
 
 	const resp = await fetch(
-		"https://api.deepgram.com/v1/listen?model=nova-2&language=es&smart_format=true&punctuate=true&encoding=opus",
+		"https://api.deepgram.com/v1/listen?model=nova-2&language=es&smart_format=true&punctuate=true",
 		{
 			method: "POST",
 			headers: {

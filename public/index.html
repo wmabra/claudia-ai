@@ -334,8 +334,6 @@
         SPEAKING: "speaking",
       };
       let currentState = STATE.IDLE;
-      let mediaRecorder = null;
-      let audioChunks = [];
       let ws = null;
       let reconnectTimer = null;
 
@@ -470,42 +468,65 @@
         setTimeout(() => errorToast.classList.remove("visible"), 4000);
       }
 
-      // ── Audio recording ──
+      // ── Audio recording (WAV format for reliability) ──
+      let audioContext = null;
+      let scriptProcessor = null;
+      let audioStream = null;
+      let pcmSamples = [];
+
+      function encodeWAV(samples, sampleRate) {
+        const buffer = new ArrayBuffer(44 + samples.length * 2);
+        const view = new DataView(buffer);
+        // RIFF header
+        writeString(view, 0, 'RIFF');
+        view.setUint32(4, 36 + samples.length * 2, true);
+        writeString(view, 8, 'WAVE');
+        // fmt chunk
+        writeString(view, 12, 'fmt ');
+        view.setUint32(16, 16, true); // chunk size
+        view.setUint16(20, 1, true);  // PCM
+        view.setUint16(22, 1, true);  // mono
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true); // byte rate
+        view.setUint16(32, 2, true);  // block align
+        view.setUint16(34, 16, true); // bits per sample
+        // data chunk
+        writeString(view, 36, 'data');
+        view.setUint32(40, samples.length * 2, true);
+        // write samples
+        for (let i = 0; i < samples.length; i++) {
+          const s = Math.max(-1, Math.min(1, samples[i]));
+          view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        }
+        return new Blob([buffer], { type: 'audio/wav' });
+
+        function writeString(view, offset, string) {
+          for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+          }
+        }
+      }
+
       async function startRecording() {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
+          audioStream = await navigator.mediaDevices.getUserMedia({
+            audio: { channelCount: 1, sampleRate: 16000 },
           });
-          // Prefer opus/webm for best quality/size ratio
-          const mimeType = MediaRecorder.isTypeSupported(
-            "audio/webm;codecs=opus",
-          )
-            ? "audio/webm;codecs=opus"
-            : "audio/webm";
+          audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+          const source = audioContext.createMediaStreamSource(audioStream);
+          scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+          pcmSamples = [];
 
-          mediaRecorder = new MediaRecorder(stream, { mimeType });
-          audioChunks = [];
-
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) audioChunks.push(e.data);
+          scriptProcessor.onaudioprocess = (e) => {
+            const input = e.inputBuffer.getChannelData(0);
+            for (let i = 0; i < input.length; i++) {
+              pcmSamples.push(input[i]);
+            }
           };
 
-          mediaRecorder.onstop = async () => {
-            stream.getTracks().forEach((t) => t.stop());
-            if (audioChunks.length === 0) return;
+          source.connect(scriptProcessor);
+          scriptProcessor.connect(audioContext.destination);
 
-            const blob = new Blob(audioChunks, { type: mimeType });
-            const reader = new FileReader();
-            reader.onload = () => {
-              const base64 = reader.result.split(",")[1];
-              if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: "audio", data: base64, mimeType: mimeType }));
-              }
-            };
-            reader.readAsDataURL(blob);
-          };
-
-          mediaRecorder.start();
           setState(STATE.LISTENING);
           setStatus("Escuchando...", "listening");
         } catch (err) {
@@ -514,11 +535,33 @@
       }
 
       function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-          mediaRecorder.stop();
-          setState(STATE.THINKING);
-          setStatus("Procesando...", "thinking");
+        if (scriptProcessor) {
+          scriptProcessor.disconnect();
+          scriptProcessor = null;
         }
+        if (audioContext) {
+          audioContext.close();
+          audioContext = null;
+        }
+        if (audioStream) {
+          audioStream.getTracks().forEach((t) => t.stop());
+          audioStream = null;
+        }
+
+        setState(STATE.THINKING);
+        setStatus("Procesando...", "thinking");
+
+        if (pcmSamples.length === 0) return;
+
+        const blob = encodeWAV(pcmSamples, 16000);
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result.split(",")[1];
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "audio", data: base64, mimeType: "audio/wav" }));
+          }
+        };
+        reader.readAsDataURL(blob);
       }
 
       // ── Orb interaction ──
