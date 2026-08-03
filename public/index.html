@@ -294,7 +294,7 @@
     <!-- Status bar -->
     <div class="status-bar" id="statusBar">
       <span class="status-dot" id="statusDot"></span>
-      <span id="statusLabel">Presiona el orbe para hablar</span>
+      <span id="statusLabel">Mantén presionado para hablar, suelta para enviar</span>
     </div>
 
     <!-- Error toast -->
@@ -358,7 +358,7 @@
             clearTimeout(reconnectTimer);
             reconnectTimer = null;
           }
-          setStatus("Presiona el orbe para hablar", "idle");
+          setStatus("Mantén presionado para hablar, suelta para enviar", "idle");
         };
 
         ws.onmessage = (event) => {
@@ -413,7 +413,7 @@
         if (state === STATE.LISTENING) {
           orb.classList.add("listening");
           statusDot.classList.add("active");
-          orbText.textContent = "🎤";
+          orbText.textContent = "Suelta para enviar";
         } else if (state === STATE.THINKING) {
           orb.classList.add("thinking");
           statusDot.classList.add("thinking");
@@ -452,11 +452,11 @@
         const audio = new Audio(`data:${mime};base64,${base64Data}`);
         audio.onended = () => {
           setState(STATE.IDLE);
-          setStatus("Presiona el orbe para hablar", "idle");
+          setStatus("Mantén presionado para hablar, suelta para enviar", "idle");
         };
         audio.onerror = () => {
           setState(STATE.IDLE);
-          setStatus("Presiona el orbe para hablar", "idle");
+          setStatus("Mantén presionado para hablar, suelta para enviar", "idle");
         };
         audio.play().catch(console.error);
       }
@@ -528,7 +528,7 @@
           scriptProcessor.connect(audioContext.destination);
 
           setState(STATE.LISTENING);
-          setStatus("Escuchando...", "listening");
+          setStatus("Grabando... suelta para enviar", "listening");
         } catch (err) {
           showError("No se pudo acceder al micrófono: " + err.message);
         }
